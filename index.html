@@ -1,0 +1,566 @@
+<!doctype html>
+<!--
+  Murdock Concierge: an unofficial concept. Not affiliated with Murdock London.
+  Single-file front end (HTML, CSS, vanilla JS). See README.md for architecture and setup.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Murdock Concierge, an unofficial concept</title>
+<meta name="description" content="A personal booking concierge for a London barbershop. Tell it what you need; it recommends the service, the shop and a time.">
+<meta name="theme-color" content="#aeb8b4">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Murdock Concierge, an unofficial concept">
+<meta property="og:description" content="A personal booking concierge concept for a London barbershop. Talk or type; it recommends the service, the shop and a time.">
+<meta property="og:image" content="docs/screenshot.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%231b3a96%27/%3E%3Ctext x=%2732%27 y=%2742%27 font-family=%27Georgia,serif%27 font-size=%2734%27 font-style=%27italic%27 fill=%27white%27 text-anchor=%27middle%27%3EM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#aeb8b4; --ink:#0e1512; --mute:rgba(14,21,18,.72); --faint:rgba(14,21,18,.5);
+  --brass:#e0bd82; --brass-2:#c98a3c; --tea:#3a6ee0; --wine:#27408f; --brassink:#1d3fa6;
+  --glass:rgba(255,255,255,.5); --line:rgba(255,255,255,.75);
+  --r:28px; --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--brassink);outline-offset:3px}
+
+/* living backdrop gives the glass something to refract */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#dfe5e1,#b7c2be 60%,#9aa8a3)}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:1;will-change:transform;animation:drift 28s ease-in-out infinite alternate}
+.o1{width:52vmax;height:52vmax;left:-12vmax;top:-14vmax;background:radial-gradient(circle,var(--brass-2),transparent 65%)}
+.o2{width:46vmax;height:46vmax;right:-14vmax;top:18vh;background:radial-gradient(circle,var(--tea),transparent 65%);animation-duration:34s;animation-delay:-8s}
+.o3{width:40vmax;height:40vmax;left:20vw;bottom:-22vmax;background:radial-gradient(circle,var(--wine),transparent 65%);animation-duration:40s;animation-delay:-16s}
+@keyframes drift{to{transform:translate3d(6vmax,4vmax,0) scale(1.15)}}
+.grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* liquid glass */
+.glass{position:relative;isolation:isolate;
+  background:linear-gradient(145deg,rgba(255,255,255,.58),rgba(255,255,255,.22) 55%,rgba(255,255,255,.42));
+  -webkit-backdrop-filter:blur(26px) saturate(185%) brightness(1.05);backdrop-filter:blur(26px) saturate(185%) brightness(1.05);
+  border:1px solid var(--line);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(10,40,30,.1),inset 0 0 22px rgba(255,255,255,.35),0 24px 50px -16px rgba(10,25,20,.35),0 2px 6px rgba(10,25,20,.12)}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:radial-gradient(420px circle at var(--mx,30%) var(--my,0%),rgba(255,255,255,.9),transparent 60%);opacity:var(--hl,.55);transition:opacity .4s}
+.glass:hover{--hl:1}
+
+/* nav */
+.nav{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:22px;padding:9px 10px 9px 20px;border-radius:999px;width:min(720px,calc(100% - 28px))}
+.logo{font:400 19px Fraunces,serif;letter-spacing:.01em;white-space:nowrap}
+.logo i{font-style:italic;color:var(--brassink)}
+.nav .sp{flex:1}
+.nav a{font-size:13px;color:var(--mute);text-decoration:none;transition:color .2s}
+.nav a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;font-weight:500;font-size:14px;transition:transform .35s var(--ease),background .25s,box-shadow .25s}
+.btn.pri{background:linear-gradient(180deg,#3a6ee0,#1b3a96);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 8px 24px -6px rgba(15,35,100,.55)}
+.btn.pri:hover{transform:translateY(-1px) scale(1.02)}
+.btn.pri:active{transform:scale(.97)}
+.btn.pri[disabled]{opacity:.4;pointer-events:none}
+.btn.ghost{background:rgba(255,255,255,.55);border:1px solid var(--line)}
+.btn.ghost:hover{background:rgba(255,255,255,.85)}
+
+/* stage */
+main{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding:112px 20px 190px;max-width:980px;margin:0 auto}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--brassink);margin-bottom:18px;display:flex;gap:10px;align-items:center}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--brassink)}
+h1{font:300 clamp(38px,7.2vw,76px)/1.02 Fraunces,serif;letter-spacing:-.025em;max-width:16ch;text-wrap:balance}
+h1 em{font-style:italic;color:var(--brassink)}
+h1 .w{display:inline-block;opacity:0;transform:translateY(.4em);filter:blur(8px);animation:wi .9s var(--ease) forwards}
+@keyframes wi{to{opacity:1;transform:none;filter:none}}
+.lede{margin-top:18px;color:var(--mute);max-width:46ch;font-size:17px;animation:fade .8s .25s both}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+#echo{display:flex}
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:200px;background:linear-gradient(transparent,rgba(154,168,163,.95));pointer-events:none;z-index:10}
+.echo{align-self:flex-start;margin-bottom:22px;padding:8px 16px;border-radius:999px;font-size:14px;color:var(--mute);animation:fade .5s both}
+#panel{margin-top:34px;animation:fade .7s .15s both}
+
+/* cards */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.card{text-align:left;padding:20px 22px;border-radius:var(--r);transition:transform .45s var(--ease),border-color .25s;display:flex;flex-direction:column;gap:6px;width:100%}
+.card:hover{transform:translateY(-3px)}
+.card h3{font:400 22px Fraunces,serif}
+.card p{font-size:14px;color:var(--mute);line-height:1.45}
+.card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:12px;font-size:14px}
+.card .price{font-weight:600;color:var(--brassink)}
+.card .time{color:var(--faint)}
+.card[aria-pressed=true]{border-color:rgba(29,63,166,.95);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),0 0 0 1px rgba(29,63,166,.6),0 0 40px -8px rgba(58,110,224,.55),0 24px 50px -16px rgba(90,65,25,.28)}
+.tick{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;transition:.3s}
+.card[aria-pressed=true] .tick{background:var(--brassink);color:#fff;border-color:var(--brassink)}
+.stepper{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px;font-size:14px}.stepper button{width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1;transition:background .2s}.stepper button:hover{background:rgba(255,255,255,.7)}.stepper span{min-width:72px;text-align:center}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:22px}
+.sum{font-size:14px;color:var(--mute)}
+.sum b{color:var(--ink);font-weight:600}
+.addon{margin-top:20px;font-size:14px;color:var(--mute)}
+.pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill{padding:10px 18px;border-radius:999px;font-size:14px;transition:transform .35s var(--ease)}
+.pill:hover{transform:translateY(-1px)}
+.pill[aria-pressed=true]{background:linear-gradient(180deg,#3a6ee0,#1b3a96);color:#fff;border-color:transparent}
+.label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:22px 0 10px}
+.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px}
+.panelbox{padding:26px;border-radius:var(--r)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.field input,.field textarea{background:rgba(255,255,255,.6);border:1px solid rgba(10,40,30,.25);border-radius:16px;padding:13px 16px;outline:0;transition:border-color .2s,background .2s;resize:none}
+.field input:focus,.field textarea:focus{border-color:var(--brassink);background:#fff}
+.two{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.ticket{display:grid;gap:12px}
+.ticket .ln{display:flex;justify-content:space-between;gap:20px;padding-bottom:12px;border-bottom:1px solid rgba(10,25,20,.12);font-size:15px}
+.ticket .ln:last-child{border:0;padding:0}
+.ticket .ln span:first-child{color:var(--mute)}
+.ref{font:300 38px Fraunces,serif;letter-spacing:.06em;color:var(--brassink)}
+.err{color:#b3321f;font-size:14px;margin-top:10px}
+
+/* living orb */
+.orbwrap{position:fixed;right:2vw;top:50%;width:min(52vmin,540px);aspect-ratio:1;transform:translateY(-52%);z-index:0;transition:all 1s var(--ease);cursor:pointer;filter:drop-shadow(0 0 46px rgba(58,110,224,.35))}
+.orbwrap canvas{width:100%;height:100%;display:block}
+@media(max-width:900px){.orbwrap{right:50%;top:34%;transform:translate(50%,-50%);width:86vmin;opacity:.22}}
+main{position:relative;z-index:1;transition:opacity .6s,filter .6s}
+body.voicing .orbwrap{right:50%;top:39%;transform:translate(50%,-50%);width:min(72vmin,680px);opacity:1}
+body.voicing main{opacity:0;filter:blur(14px);pointer-events:none}
+body.voicing .chips{opacity:0;pointer-events:none}
+.voiceui{position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:25;text-align:center;opacity:0;pointer-events:none;transition:opacity .6s;width:min(680px,calc(100% - 40px))}
+body.voicing .voiceui{opacity:1;pointer-events:auto}
+.vstate{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--brassink)}
+.vcap{display:inline-block;padding:10px 22px;border-radius:24px;background:rgba(255,255,255,.38);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--line);font:300 clamp(22px,3.6vw,36px)/1.22 Fraunces,serif;letter-spacing:-.01em;margin:12px 0 16px;text-wrap:balance}
+.vcap:empty{display:none}
+.mic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.55);border:1px solid var(--line);transition:transform .35s var(--ease),background .25s}
+.mic:hover{transform:scale(1.07);background:#fff}
+body.voicing .mic{background:linear-gradient(180deg,#3a6ee0,#1b3a96);color:#fff;animation:mp 1.6s ease-in-out infinite}
+@keyframes mp{50%{box-shadow:0 0 0 10px rgba(58,110,224,.18)}}
+/* dock */
+.dock{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(720px,calc(100% - 28px));z-index:20;display:flex;flex-direction:column;gap:12px}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px;justify-content:center;flex-wrap:wrap}
+.chip{padding:8px 15px;border-radius:999px;font-size:13.5px;color:var(--ink);transition:transform .35s var(--ease)}
+.chip:hover{transform:translateY(-2px)}
+.composer{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 22px;border-radius:999px}
+.composer input{flex:1;background:none;border:0;outline:0;font-size:16px;min-width:0}
+.composer input::placeholder{color:var(--faint)}
+.send{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#3a6ee0,#1b3a96);color:#fff;transition:transform .35s var(--ease)}
+.send:hover{transform:scale(1.07)}
+.send:active{transform:scale(.93)}
+.legal{position:fixed;right:18px;top:50%;writing-mode:vertical-rl;font-size:11px;letter-spacing:.12em;color:var(--faint);transform:translateY(-50%);pointer-events:none}
+@media(max-width:900px){.legal{display:none}}
+.foot{text-align:center;font-size:11px;color:var(--faint)}
+@media(max-width:560px){.nav a.hide{display:none}.nav{gap:10px}.nav .btn{white-space:nowrap;padding:9px 14px;font-size:13px}main{padding-top:96px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<noscript><p style="padding:90px 24px;font-family:system-ui">This concierge needs JavaScript. Please enable it, or call the shop on 020 3393 7946.</p></noscript>
+<div class="bg"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i></div>
+<div class="grain"></div>
+
+<header class="nav glass">
+  <div class="logo">Murdock <i>concierge</i></div>
+  <div class="sp"></div>
+  <a class="hide" href="#" id="navReset">Start over</a>
+  <a class="btn ghost" href="tel:+442033937946">Call the shop</a>
+</header>
+
+<div class="legal">UNOFFICIAL CONCEPT · NOT AFFILIATED WITH MURDOCK LONDON</div>
+
+<div class="orbwrap" id="orb" role="button" tabindex="0" aria-label="Talk to the concierge"><canvas id="orbcv"></canvas></div>
+<div class="voiceui" id="voiceui" aria-live="polite"><div class="vstate" id="vstate">Listening</div><div class="vcap" id="vcap"></div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn ghost" id="vvoice" type="button" aria-label="Change voice">Voice</button><button class="btn ghost" id="vstop" type="button">End voice</button></div></div>
+
+<main id="stage" aria-live="polite">
+  <div id="echo"></div>
+  <div class="eyebrow" id="eyebrow"></div>
+  <h1 id="headline"></h1>
+  <p class="lede" id="lede"></p>
+  <div id="panel"></div>
+</main>
+
+<div class="dock">
+  <div class="chips" id="chips"></div>
+  <form class="composer glass" id="form" autocomplete="off">
+    <input id="input" placeholder="Tell me what you need…" aria-label="Message the concierge" enterkeyhint="send">
+    <button class="mic" id="mic" type="button" aria-label="Talk to the concierge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <button class="send" aria-label="Send" type="submit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+  </form>
+  <div class="foot">Independent concept. Requests are passed to a demo inbox, not to the shop.</div>
+</div>
+
+<script>
+/* ---------- config ---------- */
+const CFG = { SUPABASE_URL: "https://ygibijacuwqogrnzojux.supabase.co", SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaWJpamFjdXdxb2dybnpvanV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNDQ1ODYsImV4cCI6MjExMDkyMDU4Nn0.aApnT6Psn_gSCB_Auj1rVZ7peW_2wCh2RCGpCmwFMBA" };
+
+/* ---------- business knowledge (from the shop's public booking page) ---------- */
+const SERVICES = [
+ {id:"haircut",cat:"Hair",name:"The Haircut",price:52,from:1,min:45,blurb:"Consultation, clippers or scissors, wash, style and a spray of cologne.",tags:"cut hair haircut trim style regular"},
+ {id:"restyle",cat:"Hair",name:"The Restyle",price:66,from:1,min:60,blurb:"Longer chair time to talk through a change. Wash, style, cologne.",tags:"restyle change new look different longer"},
+ {id:"backsides",cat:"Hair",name:"Back & Sides",price:42,from:1,min:30,blurb:"A clipper tidy between cuts. Arrive with freshly washed hair.",tags:"back sides tidy neaten between"},
+ {id:"onegrade",cat:"Hair",name:"The One Grade",price:20,from:1,min:15,blurb:"Short and sharp. Clippers all over, one guard, neckline finished.",tags:"one grade buzz clippers quick fast short"},
+ {id:"stylego",cat:"Hair",name:"Style & Go",price:20,from:1,min:15,blurb:"Rinse, style and cologne in 15 minutes. No cut included.",tags:"style go interview date night quick fast"},
+ {id:"cutscalp",cat:"Hair",name:"Haircut & Scalp Treatment",price:88,from:1,min:75,blurb:"Scalp treatment, massage, haircut and a take-home Revitalising Scalp Shampoo.",tags:"scalp oily dandruff treat massage"},
+ {id:"beardtrim",cat:"Beard",name:"The Beard Trim",price:26,min:15,blurb:"A tidy with clippers and scissors, finished with beard oil, moisturiser or balm.",tags:"beard trim tidy"},
+ {id:"beardreshape",cat:"Beard",name:"The Beard Reshape",price:42,min:30,blurb:"For a bigger change. Scissors and clippers, no razor work.",tags:"beard reshape shape change big"},
+ {id:"beardcut",cat:"Beard",name:"Beard Shaping & Cut-Throat",price:52,min:45,blurb:"Shape, cleanse, hot towel and a straight-razor finish on the edges.",tags:"beard cut throat razor straight hot towel pamper"},
+ {id:"tache",cat:"Beard",name:"The Moustache Trim",price:20,min:15,blurb:"Fine tuning for the tache, styled with balm.",tags:"moustache mustache tache"},
+ {id:"wetshave",cat:"Shave",name:"The Wet Shave",price:62,from:1,min:60,blurb:"Straight-razor shave with a signature facial, hot towels and balm.",tags:"shave wet razor smooth clean face"},
+ {id:"headshave",cat:"Shave",name:"Traditional Head Shave",price:52,from:1,min:45,blurb:"Hot towels, lather and a straight razor for the closest shave.",tags:"head shave bald"},
+ {id:"full",cat:"Full",name:"The Full Service",price:110,from:1,min:105,blurb:"Haircut plus wet shave or beard cut-throat. Whisky or a cold beer on hand.",tags:"full service works everything ultimate wedding special treat pamper occasion groom"},
+ {id:"facial",cat:"Skin",name:"The Facial",price:36,min:30,blurb:"Cleanse, scrub, hot towel and moisturise. A pick-me-up.",tags:"facial skin face"},
+ {id:"scalp",cat:"Skin",name:"The Scalp Treatment",price:36,min:30,blurb:"Purifying clay mask and massage. Light hair, refreshed scalp.",tags:"scalp treatment oily clay mask"}
+];
+const SHOPS = [
+ {id:"cg",name:"Covent Garden",addr:"18 Monmouth Street, WC2H 9HB"},
+ {id:"soho",name:"Soho",addr:"83 Brewer Street, W1F 9ZN"},
+ {id:"sh",name:"Shoreditch",addr:"46 Redchurch Street, E2 7DP"},
+ {id:"bg",name:"Broadgate",addr:"Lower Ground 14, 1 Broadgate, EC2A 2BQ"}
+];
+const PHONE="020 3393 7946";
+const TIMES=["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30"];
+
+/* ---------- state ---------- */
+const PRODUCTS=[{id:"seasalt",name:"Sea Salt Styling Spray",price:22.4},{id:"texture",name:"Texture Paste",price:14},{id:"mattmud",name:"Matt Mud",price:14},{id:"beardoil",name:"Beard Oil",price:14.7},{id:"beardmoist",name:"Beard Moisturiser",price:18.9}];
+const OCCASIONS=[[/wedding|groom|best man|usher/,"Wedding"],[/interview|job|work event|presentation/,"Interview"],[/date|anniversary/,"Date night"],[/birthday|party|stag/,"Celebration"],[/holiday|trip|travel|vacation/,"Trip"],[/graduation|prom|ceremony/,"Ceremony"]];
+const TIMELINE={"Wedding":[["5 to 7 days before","The Haircut, so it settles in"],["1 to 2 days before","Beard Trim or Cut-Throat for crisp edges"],["The morning of","Style & Go if you want a final polish"]],"Interview":[["2 to 3 days before","The Haircut, so it looks lived-in"],["Morning of","Style & Go, 15 minutes"]],"Date night":[["Same day","Style & Go or a Beard Trim, 15 minutes"],["If time allows","The Wet Shave for a clean finish"]],"Celebration":[["1 to 3 days before","The Haircut and a Beard Trim"],["Want to go all out","The Full Service, with a drink"]],"Trip":[["Before you fly","The Haircut, so it grows out well"],["Pack","Beard Oil or Texture Paste for the road"]],"Ceremony":[["3 to 5 days before","The Haircut"],["Day before","The Facial for fresh skin"]]};
+const S={step:"welcome",guests:1,products:new Set(),occasion:null,picked:new Set(),shop:null,date:null,time:null,barber:"Anyone",details:{name:"",email:"",phone:"",notes:""},suggest:[],ref:null,err:""};
+const $=s=>document.querySelector(s);
+const svc=id=>SERVICES.find(s=>s.id===id);
+const gbp=n=>"£"+n;
+const totals=()=>{let p=0,m=0,f=false;S.picked.forEach(i=>{const s=svc(i);p+=s.price;m+=s.min;if(s.from)f=true});return{p:p*S.guests,m,f}};
+const profile=()=>{try{return JSON.parse(localStorage.getItem("mdx_profile")||"null")}catch(_){return null}};
+const saveProfile=d=>{try{localStorage.setItem("mdx_profile",JSON.stringify({name:d.name,email:d.email,phone:d.phone}))}catch(_){}};
+const hr=()=>{const h=new Date().getHours();return h<5?"Evening":h<12?"Morning":h<18?"Afternoon":"Evening"};
+const days=()=>Array.from({length:8},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return d});
+const fmtDay=d=>d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+const fmtLong=d=>d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- intent: tiny deterministic brain ---------- */
+function score(text){
+  const t=" "+text.toLowerCase()+" ";
+  return SERVICES.map(s=>({s,n:s.tags.split(" ").reduce((a,w)=>a+(t.includes(w)?1:0),0)+(t.includes(s.name.toLowerCase())?3:0)})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).map(x=>x.s.id);
+}
+function answerFaq(t){
+  t=t.toLowerCase();
+  if(/where|address|location|find you|near/.test(t)) return {h:"Four shops, all in London.",l:SHOPS.map(s=>s.name+": "+s.addr).join(" · ")};
+  if(/open|hours|closing|close/.test(t)) return {h:"Hours vary by shop.",l:"I don't have live opening hours, so the safest route is a quick call on "+PHONE+". I can still note your preferred time."};
+  if(/price|cost|how much|cheap/.test(t)) return {h:"Cuts from £52. Beards from £26.",l:"A Full Service is from £110. Tell me what you want and I'll total it for you."};
+  if(/gift|voucher/.test(t)) return {h:"Gift cards exist.",l:"The shop sells them on its booking page. I can help you choose the service to gift."};
+  if(/drink|beer|whisk|gin/.test(t)) return {h:"Yes, the Full Service comes with a drink.",l:"Whisky, a Camden lager, Lucky Saint or Isle of Harris Gin, according to the shop."};
+  if(/hello|hi\b|hey|yo\b/.test(t)) return {h:"Hello. Let's get you sharp.",l:"Tell me what you're after, or pick one below."};
+  return null;
+}
+
+/* ---------- headline ---------- */
+function say(eyebrow,head,lede){
+  $("#eyebrow").textContent=eyebrow;
+  const h=$("#headline");
+  h.innerHTML=head.split(/(\s+)/).map((w,i)=>/\s/.test(w)?w:`<span class="w" style="animation-delay:${i*38}ms">${w}</span>`).join("");
+  h.querySelectorAll(".w").forEach(w=>{if(/^\*.*\*$/.test(w.textContent)){w.innerHTML="<em>"+w.textContent.slice(1,-1)+"</em>"}});
+  const l=$("#lede");l.textContent=lede||"";l.style.display=lede?"":"none";
+  l.style.animation="none";l.offsetHeight;l.style.animation="";
+}
+function chips(list){
+  $("#chips").innerHTML=list.map(c=>`<button class="chip glass" data-q="${esc(c)}">${esc(c)}</button>`).join("");
+}
+
+/* ---------- renderers ---------- */
+function render(){
+  const P=$("#panel");P.style.animation="none";P.offsetHeight;P.style.animation="";
+  ({welcome,pick,shop,when,details,review,done}[S.step])(P);
+  bindGlass();
+}
+function welcome(P){
+  const pf=profile(),fn=pf&&pf.name?pf.name.split(" ")[0]:null;
+  say(fn?"Welcome back":"Murdock London · Concierge",fn?`Good ${hr().toLowerCase()}, ${esc(fn)}. Ready to get *sharp?*`:`Good ${hr().toLowerCase()}. Let's get you *sharp.*`,fn?"I remember your details, so this will be quick. Tell me what you need.":"Tell me what you need in your own words. I'll find the right service, a shop near you and a time that works.");
+  P.innerHTML="";
+  chips(["A haircut","Beard tidy","A proper shave","The works","I have an event"]);
+}
+function pick(P){
+  const t=totals();
+  const list=S.suggest.length?S.suggest.map(svc):SERVICES.filter(s=>["haircut","beardtrim","wetshave","full"].includes(s.id));
+  const extras=["facial","scalp"].filter(i=>!S.picked.has(i)&&!list.find(s=>s.id===i)).map(svc);
+  say("Step 1 of 4 · Service",S.suggest.length?"Here's what I'd *suggest.*":"Where shall we *start?*",S.suggest.length?"Tap to select. Add a little extra if you like.":"Choose a service, or just tell me below.");
+  const card=s=>`<button class="card glass" data-svc="${s.id}" aria-pressed="${S.picked.has(s.id)}"><div style="display:flex;justify-content:space-between;align-items:center"><h3>${s.name}</h3><span class="tick">${S.picked.has(s.id)?"✓":""}</span></div><p>${s.blurb}</p><div class="meta"><span class="price">${s.from?"from ":""}${gbp(s.price)}</span><span class="time">${s.min} min</span></div></button>`;
+  const tl=S.occasion&&TIMELINE[S.occasion]?`<div class="panelbox glass" style="margin-bottom:16px"><div class="label" style="margin:0 0 12px">${esc(S.occasion)} prep timeline</div><div class="ticket">${TIMELINE[S.occasion].map(r=>`<div class="ln"><span>${r[0]}</span><span style="text-align:right">${r[1]}</span></div>`).join("")}</div></div>`:"";
+  P.innerHTML=`${tl}<div class="grid">${list.map(card).join("")}</div>
+  ${extras.length?`<div class="addon">Make it more of a treat <div class="pills" style="margin-top:10px">${extras.map(s=>`<button class="pill glass" data-svc="${s.id}">+ ${s.name} · ${gbp(s.price)}</button>`).join("")}</div></div>`:""}
+  <div class="row"><div class="stepper glass" aria-label="Guests"><button data-g="-1" aria-label="Fewer guests">−</button><span>${S.guests} ${S.guests>1?"guests":"guest"}</span><button data-g="1" aria-label="More guests">+</button></div><button class="btn pri" id="go" ${t.p?"":"disabled"}>Continue</button><span class="sum">${t.p?`<b>${t.f?"from ":""}${gbp(t.p)}</b> · about ${t.m} min`:"Nothing selected yet"}</span></div>`;
+  chips(["Show everything","Something quick","I want a change","What's the price?"]);
+}
+function shop(P){
+  say("Step 2 of 4 · Shop","Which shop is *closest* to you?","");
+  P.innerHTML=`<div class="grid">${SHOPS.map(s=>`<button class="card glass" data-shop="${s.id}" aria-pressed="${S.shop===s.id}"><h3>${s.name}</h3><p>${s.addr}</p></button>`).join("")}</div>`;
+  chips(["Back"]);
+}
+function when(P){
+  const sh=SHOPS.find(s=>s.id===S.shop);
+  say("Step 3 of 4 · Time",`When suits you at *${sh.name}?*`,"Pick a day and your preferred time. The shop confirms the exact slot.");
+  P.innerHTML=`<div class="label" style="margin-top:0">Day</div><div class="pills">${days().map((d,i)=>`<button class="pill glass" data-date="${d.toISOString().slice(0,10)}" aria-pressed="${S.date===d.toISOString().slice(0,10)}">${i===0?"Today":i===1?"Tomorrow":fmtDay(d)}</button>`).join("")}</div>
+  <div class="label">Preferred time</div><div class="times">${TIMES.map(t=>`<button class="pill glass" data-time="${t}" aria-pressed="${S.time===t}">${t}</button>`).join("")}</div>
+  <div class="label">Barber</div><div class="pills">${["Anyone","Master barber","Head barber"].map(b=>`<button class="pill glass" data-barber="${b}" aria-pressed="${S.barber===b}">${b}</button>`).join("")}</div>
+  <div class="row"><button class="btn pri" id="go" ${S.date&&S.time?"":"disabled"}>Continue</button></div>`;
+  chips(["Back","After work","Lunchtime"]);
+}
+function details(P){
+  say("Step 4 of 4 · You","Nearly there. Who's *it for?*","");
+  const d=(S.details.name||S.details.email)?S.details:(profile()||S.details);
+  P.innerHTML=`<form class="panelbox glass" id="dform" novalidate>
+   <div class="two"><label class="field"><span>Name</span><input name="name" required autocomplete="name" value="${esc(d.name)}"></label>
+   <label class="field"><span>Email</span><input name="email" type="email" required autocomplete="email" value="${esc(d.email)}"></label></div>
+   <label class="field"><span>Phone (optional)</span><input name="phone" type="tel" autocomplete="tel" value="${esc(d.phone)}"></label>
+   <label class="field"><span>Anything we should know?</span><textarea name="notes" rows="2" placeholder="Reference photo, sensitive skin, running late…">${esc(d.notes)}</textarea></label>
+   ${S.err?`<div class="err">${esc(S.err)}</div>`:""}
+   <div class="row" style="margin-top:6px"><button class="btn pri" type="submit">Review</button></div></form>`;
+  chips(["Back"]);
+}
+function review(P){
+  const t=totals(),sh=SHOPS.find(s=>s.id===S.shop),dt=new Date(S.date+"T12:00");
+  say("Review","That looks *right.* Shall I send it?","");
+  P.innerHTML=`<div class="panelbox glass ticket">
+   <div class="ln"><span>Service</span><span style="text-align:right">${[...S.picked].map(i=>svc(i).name).join("<br>")}</span></div>
+   <div class="ln"><span>Where</span><span>${sh.name} · ${sh.addr}</span></div>
+   <div class="ln"><span>When</span><span>${fmtLong(dt)}, ${S.time}</span></div>
+   <div class="ln"><span>Barber</span><span>${S.barber}</span></div>
+   ${S.guests>1?`<div class="ln"><span>Party</span><span>${S.guests} guests</span></div>`:""}
+   ${S.products.size?`<div class="ln"><span>Take home</span><span style="text-align:right">${[...S.products].map(i=>PRODUCTS.find(p=>p.id===i).name).join("<br>")}</span></div>`:""}
+   <div class="ln"><span>For</span><span>${esc(S.details.name)} · ${esc(S.details.email)}</span></div>
+   <div class="ln"><span>Estimate</span><span><b>${t.f?"from ":""}${gbp(t.p)}</b> · about ${t.m} min</span></div></div>
+   <div class="label">Pick up something to take home (optional)</div><div class="pills">${PRODUCTS.map(p=>`<button class="pill glass" data-prod="${p.id}" aria-pressed="${S.products.has(p.id)}">${p.name} · £${p.price.toFixed(2)}</button>`).join("")}</div>
+   ${S.err?`<div class="err">${esc(S.err)}</div>`:""}
+   <div class="row"><button class="btn pri" id="send">Send request</button><button class="btn ghost" id="back">Edit</button></div>`;
+  chips([]);
+}
+function done(P){
+  say("Request received","You're on the *list.*","This is a concept demo, so nothing has reached the real shop. Your reference is below.");
+  P.innerHTML=`<div class="panelbox glass"><div class="ref">${S.ref}</div><p style="color:var(--mute);margin-top:8px">Saved with your preferences. For a real booking, call ${PHONE}.</p><div class="row"><button class="btn pri" id="ics">Add to calendar</button><button class="btn ghost" id="copy">Copy summary</button><button class="btn ghost" id="again">Book another</button></div></div>`;
+  chips([]);
+}
+
+/* ---------- interactions ---------- */
+function reset(){Object.assign(S,{step:"welcome",shop:null,date:null,time:null,barber:"Anyone",suggest:[],err:""});S.picked.clear();S.products.clear();S.guests=1;S.occasion=null;$("#echo").innerHTML="";render()}
+function echo(t){$("#echo").innerHTML=`<div class="echo glass">${esc(t)}</div>`}
+function handle(text){
+  text=text.trim();if(!text)return;
+  if(text==="Back"){S.err="";S.step={pick:"welcome",shop:"pick",when:"shop",details:"when",review:"details"}[S.step]||"welcome";return render()}
+  echo(text);
+  const q=text.toLowerCase();
+  if(q==="i have an event"){return say("Concierge","What's the occasion?","A wedding, interview, date, celebration or trip. I'll build a prep plan around it.")||chips(["Wedding","Interview","Date night","Celebration","Trip"])}
+  const oc=OCCASIONS.find(o=>o[0].test(q)||q===o[1].toLowerCase());if(oc){S.occasion=oc[1]}
+  if(q==="not sure yet"){S.step="pick";S.suggest=["haircut","beardtrim","wetshave","full"];return render()}
+  if(q==="show everything"){S.step="pick";S.suggest=SERVICES.map(s=>s.id);return render()}
+  if(q==="something quick"){S.step="pick";S.suggest=["onegrade","stylego","beardtrim","tache"];return render()}
+  if(q==="i want a change"){S.step="pick";S.suggest=["restyle","beardreshape","haircut"];return render()}
+  if(q==="after work"||q==="lunchtime"){if(S.step==="when"){S.time=q==="lunchtime"?"12:30":"18:00";return render()}}
+  const occPick={"Wedding":["full","haircut","beardcut"],"Interview":["haircut","stylego","beardtrim"],"Date night":["stylego","beardtrim","wetshave"],"Celebration":["full","haircut","beardtrim"],"Trip":["haircut","beardtrim"],"Ceremony":["haircut","facial"]};
+  const m=(oc?occPick[oc[1]]:null)||({"a haircut":["haircut","restyle","backsides","onegrade"],"beard tidy":["beardtrim","beardreshape","tache","beardcut"],"a proper shave":["wetshave","headshave","beardcut"],"the works":["full","cutscalp","wetshave"]})[q]||score(text);
+  const faq=!m.length?answerFaq(text):null;
+  if(m.length){S.step="pick";S.suggest=m.slice(0,4);return render()}
+  if(faq){say("Concierge",faq.h,faq.l);if(S.step==="welcome")$("#panel").innerHTML="";chips(["A haircut","Beard tidy","The works","Not sure yet"]);return}
+  say("Concierge","I'm not sure I caught that.","Try a haircut, beard, shave or the works. You can also ask about prices and locations.");
+  chips(["A haircut","Beard tidy","A proper shave","The works"]);
+}
+function bindGlass(){}
+document.addEventListener("pointermove",e=>{const g=e.target.closest&&e.target.closest(".glass");if(g){const r=g.getBoundingClientRect();g.style.setProperty("--mx",(e.clientX-r.left)+"px");g.style.setProperty("--my",(e.clientY-r.top)+"px")}});
+
+document.addEventListener("click",e=>{
+  const c=e.target.closest("[data-svc],[data-g],[data-prod],#ics,#copy,[data-shop],[data-date],[data-time],[data-barber],[data-q],#go,#send,#back,#again,#navReset");if(!c)return;
+  if(c.dataset.q){return handle(c.dataset.q)}
+  if(c.id==="navReset"){e.preventDefault();return reset()}
+  if(c.id==="again")return reset();
+  if(c.id==="ics")return ics();
+  if(c.id==="copy")return copySummary(c);
+  if(c.dataset.g){S.guests=Math.min(6,Math.max(1,S.guests+(+c.dataset.g)));return render()}
+  if(c.dataset.prod){const i=c.dataset.prod;S.products.has(i)?S.products.delete(i):S.products.add(i);return render()}
+  if(c.dataset.svc){const i=c.dataset.svc;S.picked.has(i)?S.picked.delete(i):S.picked.add(i);return render()}
+  if(c.dataset.shop){S.shop=c.dataset.shop;S.step="when";return render()}
+  if(c.dataset.date){S.date=c.dataset.date;return render()}
+  if(c.dataset.time){S.time=c.dataset.time;return render()}
+  if(c.dataset.barber){S.barber=c.dataset.barber;return render()}
+  if(c.id==="go"){S.step=S.step==="pick"?"shop":"details";return render()}
+  if(c.id==="back"){S.step="details";return render()}
+  if(c.id==="send")return submit(c);
+});
+document.addEventListener("submit",e=>{
+  if(e.target.id==="form"){e.preventDefault();const i=$("#input");const v=i.value;i.value="";return handle(v)}
+  if(e.target.id==="dform"){e.preventDefault();const f=new FormData(e.target);const d=Object.fromEntries(f);
+    if(!d.name.trim()||!/^\S+@\S+\.\S+$/.test(d.email)){S.details={...S.details,...d};S.err="Add your name and a valid email.";return details($("#panel"))}
+    S.details=d;S.err="";S.step="review";render()}
+});
+$("#input").addEventListener("keydown",e=>{if(e.key==="Escape")e.target.blur()});
+
+function ics(){
+  const sh=SHOPS.find(x=>x.id===S.shop),t=totals(),[h,m]=S.time.split(":"),d=S.date.replace(/-/g,"");
+  const st=d+"T"+h+m+"00",en=new Date(new Date(S.date+"T"+S.time+":00").getTime()+t.m*60000);
+  const pad=n=>String(n).padStart(2,"0"),e=en.getFullYear()+pad(en.getMonth()+1)+pad(en.getDate())+"T"+pad(en.getHours())+pad(en.getMinutes())+"00";
+  const body=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Murdock Concierge Concept//EN","BEGIN:VEVENT","UID:"+S.ref+"@concierge","DTSTAMP:"+new Date().toISOString().replace(/[-:]|\.\d{3}/g,""),"DTSTART:"+st,"DTEND:"+e,"SUMMARY:Murdock London (requested)","LOCATION:"+sh.name+", "+sh.addr,"DESCRIPTION:"+[...S.picked].map(i=>svc(i).name).join(", ")+". Requested time, not confirmed. Call "+PHONE+".","END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([body],{type:"text/calendar"}));a.download="murdock-"+S.ref+".ics";a.click();
+}
+function copySummary(b){
+  const sh=SHOPS.find(x=>x.id===S.shop),t=totals();
+  const txt=`Murdock London request ${S.ref}\n${[...S.picked].map(i=>svc(i).name).join(" + ")}${S.guests>1?" x"+S.guests:""}\n${sh.name}, ${fmtLong(new Date(S.date+"T12:00"))} ${S.time}\nEstimate ${t.f?"from ":""}${gbp(t.p)}`;
+  navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{b.textContent="Copied"});
+}
+document.addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement.tagName!=="INPUT"&&document.activeElement.tagName!=="TEXTAREA"){e.preventDefault();$("#input").focus()}});
+async function submit(btn){
+  btn.disabled=true;btn.textContent="Sending…";
+  const t=totals();
+  S.ref="MDX-"+Math.random().toString(36).slice(2,6).toUpperCase();
+  const row={ref:S.ref,name:S.details.name.trim(),email:S.details.email.trim(),phone:S.details.phone||null,notes:S.details.notes||null,
+    services:[...S.picked].map(i=>svc(i).name),shop:SHOPS.find(s=>s.id===S.shop).name,preferred_date:S.date,preferred_time:S.time,barber:S.barber,est_price:t.p,est_minutes:t.m,guests:S.guests,products:[...S.products].map(i=>PRODUCTS.find(p=>p.id===i).name),occasion:S.occasion};
+  saveProfile(S.details);
+  try{
+    if(CFG.SUPABASE_URL){
+      const r=await fetch(CFG.SUPABASE_URL+"/rest/v1/concierge_requests",{method:"POST",headers:{apikey:CFG.SUPABASE_KEY,Authorization:"Bearer "+CFG.SUPABASE_KEY,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(row)});
+      if(!r.ok)throw new Error(await r.text());
+    }else{try{localStorage.setItem("mdx_"+S.ref,JSON.stringify(row))}catch(_){}}
+    S.step="done";render();
+  }catch(err){S.err="Couldn't send that. Please try again.";console.error(err);S.step="review";render()}
+}
+
+/* ---------- living orb ---------- */
+const Orb={level:0,pulse:0,state:"idle"};
+(function(){
+  const cv=document.getElementById("orbcv"),ctx=cv.getContext("2d");
+  const N=matchMedia("(max-width:700px)").matches?3200:7600,P=new Float32Array(N*3);
+  for(let i=0;i<N;i++){const y=1-2*(i+.5)/N,r=Math.sqrt(1-y*y),a=i*2.399963;P[i*3]=Math.cos(a)*r;P[i*3+1]=y;P[i*3+2]=Math.sin(a)*r}
+  let W=0,H=0,dpr=1,amp=0,spin=0,hue=0;
+  const size=()=>{const r=cv.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=cv.width=Math.max(2,r.width*dpr);H=cv.height=Math.max(2,r.height*dpr)};
+  new ResizeObserver(size).observe(cv);size();
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function frame(ts){
+    const t=ts/1000,st=Orb.state;
+    const idle=.05+.025*Math.sin(t*1.1);
+    let target=idle;
+    if(st==="listening")target=idle+Math.min(.5,Orb.level*.8);
+    else if(st==="speaking")target=.14+.16*Math.abs(Math.sin(t*6.1))*Math.abs(Math.sin(t*1.9+1))+Orb.pulse;
+    else if(st==="thinking")target=.12+.05*Math.sin(t*8);
+    amp+=(target-amp)*.12;Orb.pulse*=.92;Orb.level*=.9;
+    spin+=reduce?0:(st==="thinking"?.011:.0028)+amp*.008;
+    hue+=((st==="speaking"?1:0)-hue)*.05;
+    ctx.clearRect(0,0,W,H);
+    const R=Math.min(W,H)*.33,cx=W/2,cy=H/2,cs=Math.cos(spin),sn=Math.sin(spin),ct=.94,sT=.34;
+    for(let i=0;i<N;i++){
+      let x=P[i*3],y=P[i*3+1],z=P[i*3+2];
+      const n=(Math.sin(x*3.1+t*1.1+z*2)+Math.sin(y*4.3-t*1.4+x)+Math.sin(z*5.2+t*.8-y*2))/3;
+      const d=1+amp*n*.5+amp*.1;
+      x*=d;y*=d;z*=d;
+      const rx=x*cs+z*sn;let rz=-x*sn+z*cs;const ry=y*ct-rz*sT;rz=y*sT+rz*ct;
+      const f=3/(3-rz*.8),sx=cx+rx*R*f,sy=cy+ry*R*f;
+      const rim=1-Math.min(1,Math.abs(rz)/d),r2=rim*rim;
+      const a=.1+.82*r2*r2*1.15+amp*.5*rim+(rz<0?-.06:0);
+      ctx.globalAlpha=Math.max(.04,Math.min(1,a));
+      ctx.fillStyle=rim>.62?(hue>.5?"#2b5fe0":"#1d3fa6"):"#17224f";
+      const sz=(rim>.7?1.9:1.2)*dpr*(1+rz*.25);
+      ctx.fillRect(sx,sy,sz,sz);
+    }
+    ctx.globalAlpha=1;requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ---------- voice ---------- */
+const Voice=(()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  let rec=null,stream=null,ac=null,an=null,buf=null,raf=0,on=false,busy=false;
+  const cap=t=>{$("#vcap").textContent=t},st=(k,label)=>{Orb.state=k;$("#vstate").textContent=label};
+  async function mic(){
+    if(an)return;
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+      ac=new (window.AudioContext||window.webkitAudioContext)();an=ac.createAnalyser();an.fftSize=512;buf=new Uint8Array(an.fftSize);ac.createMediaStreamSource(stream).connect(an);
+      const loop=()=>{if(!an)return;an.getByteTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;s+=v*v}
+        if(Orb.state==="listening")Orb.level=Math.max(Orb.level,Math.min(1,Math.sqrt(s/buf.length)*7));raf=requestAnimationFrame(loop)};loop();
+    }catch(_){an=null}
+  }
+  function listen(){
+    if(!on)return;busy=false;st("listening","Listening");cap("Go ahead, I'm listening.");
+    rec=new SR();rec.lang="en-GB";rec.interimResults=true;rec.continuous=false;let got="";
+    rec.onresult=e=>{let txt="",fin=false;for(const r of e.results){txt+=r[0].transcript;if(r.isFinal)fin=true}got=txt;cap(txt);Orb.level=Math.max(Orb.level,.5);if(fin){busy=true;try{rec.stop()}catch(_){}}};
+    rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){cap("Microphone access is blocked. Allow it in your browser, then tap the orb.");st("idle","Paused");on=false}};
+    rec.onend=()=>{if(!on)return;if(got&&busy){answer(got)}else if(!busy){setTimeout(()=>on&&!busy&&listen(),350)}};
+    try{rec.start()}catch(_){}
+  }
+  function answer(text){
+    st("thinking","Thinking");cap(text);
+    handle(text);
+    setTimeout(()=>speak(),650);
+  }
+  /* --- human-sounding voice selection --- */
+  const BAD=/fred|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|junior|kathy|organ|princess|ralph|trinoids|whisper|zarvox|compact|eloquence|espeak|grandma|grandpa|rocko|shelley|sandy|flo|reed|eddy/i;
+  function rank(v){
+    let n=0;const nm=v.name+" "+v.voiceURI;
+    if(BAD.test(nm))return -999;
+    if(/en-GB/i.test(v.lang))n+=40;else if(/en-(AU|IE|ZA|NZ|US)/i.test(v.lang))n+=22;else if(/^en/i.test(v.lang))n+=10;else return -999;
+    if(/natural|neural|online/i.test(nm))n+=120;
+    if(/premium|enhanced|siri/i.test(nm))n+=90;
+    if(/google uk english|google us english/i.test(nm))n+=45;
+    if(/serena|daniel|oliver|arthur|kate|stephanie|libby|sonia|ryan|thomas|aria|jenny|guy|samantha|ava|allison|nicky|moira|karen|tessa/i.test(nm))n+=35;
+    if(v.localService)n+=6;
+    return n;
+  }
+  let pool=[],vi=0;
+  function loadVoices(){const all=("speechSynthesis" in window)?speechSynthesis.getVoices():[];pool=all.map(v=>({v,n:rank(v)})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,6).map(x=>x.v);const lab=$("#vvoice");if(lab)lab.textContent=pool.length?"Voice: "+pool[vi%pool.length].name.replace(/Microsoft |Google |\(.*?\)|Online|Natural/g,"").replace(/\s+/g," ").trim():"Voice: default"}
+  if("speechSynthesis" in window){speechSynthesis.onvoiceschanged=loadVoices;loadVoices()}
+  const say2=t=>t.replace(/£\s?(\d+)\.(\d\d)/g,(m,a,b)=>a+" pounds "+(+b)).replace(/£\s?(\d+)/g,"$1 pounds").replace(/\bfrom\b/gi,"from").replace(/&/g,"and").replace(/\s*·\s*/g,". ").replace(/\b(\d+) min\b/g,"$1 minutes").replace(/\s+/g," ").trim();
+  function lines(){
+    const head=$("#headline").textContent.replace(/\s+/g," ").trim(),lede=($("#lede").textContent||"").trim();
+    const names=[...document.querySelectorAll("#panel .card h3")].slice(0,3).map(h=>h.textContent.trim());
+    let out=[head,lede];
+    if(names.length)out.push("I'd suggest "+(names.length>1?names.slice(0,-1).join(", ")+" or "+names.slice(-1):names[0])+".");
+    return out.filter(Boolean).flatMap(x=>say2(x).match(/[^.!?]+[.!?]*/g)||[]).map(x=>x.trim()).filter(x=>x.length>1);
+  }
+  let ttsOff=false,actx=null,aan=null,abuf=null;
+  async function speakNeural(text){
+    const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,560)})});
+    if(!r.ok)throw new Error("tts "+r.status);
+    const url=URL.createObjectURL(await r.blob());
+    if(!on){URL.revokeObjectURL(url);return}
+    const a=new Audio(url);a.crossOrigin="anonymous";
+    try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")await actx.resume();
+      if(!aan){aan=actx.createAnalyser();aan.fftSize=512;abuf=new Uint8Array(aan.fftSize)}
+      const src=actx.createMediaElementSource(a);src.connect(aan);aan.connect(actx.destination)}catch(_){}
+    let raf=0;const tick=()=>{if(aan){aan.getByteTimeDomainData(abuf);let s=0;for(let i=0;i<abuf.length;i++){const v=(abuf[i]-128)/128;s+=v*v}Orb.pulse=Math.max(Orb.pulse,Math.min(.6,Math.sqrt(s/abuf.length)*5))}raf=requestAnimationFrame(tick)};
+    st("speaking","Speaking");
+    await new Promise((res,rej)=>{a.onended=res;a.onerror=rej;tick();a.play().catch(rej)});
+    cancelAnimationFrame(raf);URL.revokeObjectURL(url);
+  }
+  function speak(){
+    if(!on)return;
+    const parts=lines();
+    if(!parts.length){return listen()}
+    cap(parts.join(" "));
+    if(!ttsOff){st("thinking","Thinking");speakNeural(parts.join(" ")).then(()=>{if(on)listen()}).catch(()=>{ttsOff=true;if(on)speak()});return}
+    if(!("speechSynthesis" in window)){return listen()}
+    speechSynthesis.cancel();st("speaking","Speaking");
+    const v=pool[vi%Math.max(1,pool.length)];let i=0;
+    const next=()=>{
+      if(!on)return;if(i>=parts.length)return listen();
+      const u=new SpeechSynthesisUtterance(parts[i++]);if(v){u.voice=v;u.lang=v.lang}else u.lang="en-GB";
+      u.rate=.96+(Math.random()*.05);u.pitch=1+(Math.random()*.06-.02);u.volume=1;
+      u.onboundary=()=>{Orb.pulse=.28};u.onstart=()=>{Orb.pulse=.3};
+      u.onend=()=>setTimeout(next,170+Math.random()*120);u.onerror=()=>{if(on)listen()};
+      speechSynthesis.speak(u);
+    };next();
+  }
+  function nextVoice(){if(!pool.length)return;vi=(vi+1)%pool.length;loadVoices();if(on&&Orb.state==="speaking"){speechSynthesis.cancel();speak()}else if("speechSynthesis" in window){const u=new SpeechSynthesisUtterance("Hello, I'm your concierge.");u.voice=pool[vi];u.lang=pool[vi].lang;u.rate=.96;speechSynthesis.speak(u)}}
+  async function start(){
+    if(on)return;
+    if(!SR){document.body.classList.add("voicing");on=true;st("idle","Voice unavailable");cap("Voice needs Chrome, Edge or Safari. You can still type below.");return}
+    on=true;document.body.classList.add("voicing");st("thinking","Starting");await mic();listen();
+  }
+  function stop(){on=false;busy=false;try{rec&&rec.abort()}catch(_){}if("speechSynthesis" in window)speechSynthesis.cancel();document.body.classList.remove("voicing");Orb.state="idle"}
+  return{nextVoice,start,stop,toggle:()=>on?stop():start(),get on(){return on}};
+})();
+$("#mic").addEventListener("click",()=>Voice.toggle());
+$("#orb").addEventListener("click",()=>Voice.toggle());
+$("#orb").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();Voice.toggle()}});
+$("#vstop").addEventListener("click",()=>Voice.stop());
+$("#vvoice").addEventListener("click",()=>Voice.nextVoice());
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&Voice.on)Voice.stop()});
+
+reset();
+</script>
+</body>
+</html>
